@@ -1,10 +1,12 @@
 # esp8266-remote-power-button
+
 Remote PC power-on **over the Internet** by emulating a **physical press of the PC power button** (Power SW) using an **ESP8266 + relay**, controlled from **Google Sheets** via **Google Apps Script**.
 
 > This is **NOT Wake-on-LAN (WOL)**.  
 > No BIOS WOL setup is required, because it electrically shorts the **Power SW** header (same as pressing the case power button).
 
 ---
+
 ## Demo Videos
 
 ### 1) IoT Server–based Remote Power-On Demo
@@ -13,113 +15,133 @@ Remote PC power-on **over the Internet** by emulating a **physical press of the 
 ### 2) Google Sheets–based Remote Power-On Demo
 [![Google Sheets demo](https://img.youtube.com/vi/qs9141ITmmg/hqdefault.jpg)](https://youtube.com/shorts/qs9141ITmmg)
 
+---
+
 ## What it does
 
-- ESP8266 connects to your Wi-Fi.
-- It periodically polls a Google Apps Script (HTTPS).
-- The script reads a value in Google Sheets (your control panel).
-- When the value changes (or matches a command), ESP8266 triggers a relay:
-  - Relay closes the Power SW circuit briefly
-  - Your PC powers on exactly like a real button press
+- ESP8266 connects to your Wi-Fi
+- Periodically polls a Google Apps Script (HTTPS)
+- Script reads a value from Google Sheets (control panel)
+- When the value changes, ESP8266 triggers a relay pulse
+- Relay shorts the **Power SW** header briefly
+- PC powers on exactly like a real button press
 
 ---
 
 ## Why this approach
 
-Most “remote power on” guides ask for:
-- Port forwarding / DDNS / VPN / NAS
+Most “remote power on” guides require:
 
-This project does **not** require inbound access to your home network.
-The ESP8266 only makes **outbound HTTPS requests** to Google.
+- Port forwarding
+- DDNS
+- VPN
+- NAS / Home Assistant
 
-Works behind NAT / CGNAT.
+This project requires **none** of them.
+
+The ESP8266 only makes **outbound HTTPS requests**, so it works behind **NAT / CGNAT** safely.
 
 ---
 
 ## Architecture
-<img width="8192" height="1045" alt="URL Reachability Flow-2026-02-07-095009" src="https://github.com/user-attachments/assets/72a8bb6f-5d77-4015-959f-13d2851c937a" />
 
-### Hardware
-
-- ESP8266 (NodeMCU / Wemos D1 mini)
 <p align="center">
-  <img src="docs/images/esp.jpg" width="400">
+  <img src="docs/images/architecture.png" width="900">
 </p>
 
-- 1-channel relay module (prefer opto-isolated if possible)
+---
+
+## Hardware
+
+### ESP8266 (NodeMCU / Wemos D1 mini)
 <p align="center">
-  <img src="docs/images/relay.jpg" width="400">
+  <img src="docs/images/esp.jpg" width="420">
 </p>
 
-- 2 wires to the motherboard Power SW header (in parallel with your case power button)
- <p align="center">
-  <img src="docs/images/sw.jpg" width="400">
-</p>
-put together be like:
+### 1-channel relay module (opto-isolated recommended)
 <p align="center">
-  <img src="docs/images/inside.jpg" width="400">
+  <img src="docs/images/relay.jpg" width="420">
 </p>
 
-The Power SW header is a low-voltage momentary switch input on the motherboard.
-Do NOT connect mains voltage. Do NOT modify the PSU wiring.
+### Wiring to motherboard Power SW header (parallel with case button)
+<p align="center">
+  <img src="docs/images/sw.jpg" width="420">
+</p>
 
-Setup (high level)
-1) Google Sheets
-Create a sheet that stores a control value, e.g.:
+### Final assembly
+<p align="center">
+  <img src="docs/images/inside.jpg" width="420">
+</p>
 
-0 = idle
+> The Power SW header is a **low-voltage momentary switch input** on the motherboard.  
+> **Do NOT** connect mains voltage. **Do NOT** modify PSU wiring.
 
-1 = trigger power press
+---
 
-You can also use a timestamp or a counter — anything that “changes” works.
+## Setup (High Level)
 
-2) Google Apps Script (Web App)
-Paste server/google_apps_script/Code.gs into Apps Script.
+### 1) Google Sheets
 
-Set your SPREADSHEET_ID (and sheet/tab name if needed).
+Create a sheet that stores a control value, for example:
 
-Deploy as Web App (accessible via HTTPS URL).
+- `0` = idle
+- `1` = trigger power press
 
-Recommended: add a shared secret (simple auth), e.g. ?key=YOUR_SECRET.
+A timestamp or counter also works — anything that **changes**.
 
-3) ESP8266 firmware
-Copy config.example.h to config.h
+---
 
-Fill in:
+### 2) Google Apps Script (Web App)
 
-Wi-Fi SSID / password
+- Paste `server/google_apps_script/Code.gs` into Apps Script
+- Set your `SPREADSHEET_ID` (and sheet name if needed)
+- Deploy as **Web App** (HTTPS URL)
 
-Apps Script Web App URL (and optional secret key)
+Recommended: add a simple shared secret, e.g. `?key=YOUR_SECRET`.
 
-Flash the .ino to your ESP8266.
+---
 
-How the “trigger” works
-Typical logic:
+### 3) ESP8266 Firmware
 
-ESP8266 reads a value from the API (derived from Google Sheets).
+- Copy `config.example.h` → `config.h`
+- Fill in:
+  - Wi-Fi SSID / password
+  - Apps Script Web App URL (and optional secret)
+- Flash the `.ino` to ESP8266
 
-If the value is different from last time, it triggers the relay pulse.
+---
 
-Pulse duration can be adjusted (e.g. 200–1000 ms).
-Some boards may need longer (e.g. 1–2 seconds).
+## How the Trigger Works
 
-FAQ
-Q: Is this Wake-on-LAN?
-A: No. This project emulates a physical press of the motherboard Power SW header using a relay.
+- ESP8266 reads the value from the API
+- If the value differs from the previous read → trigger relay pulse
+- Pulse duration adjustable (200–1000 ms typical, some boards need 1–2 s)
 
-Q: Do I need to enable WOL in BIOS?
+---
+
+## FAQ
+
+**Q: Is this Wake-on-LAN?**  
+A: No. It emulates a physical press of the motherboard Power SW header.
+
+**Q: Do I need to enable WOL in BIOS?**  
 A: No.
 
-Q: Do I need port forwarding or DDNS?
-A: No. ESP8266 only makes outbound HTTPS requests to Google Apps Script.
+**Q: Do I need port forwarding or DDNS?**  
+A: No. Only outbound HTTPS is used.
 
-Q: Is it safe?
-A: Electrically, it’s similar to the case power button (low-voltage momentary input).
-Use an isolated relay module and wire to the correct motherboard header.
+**Q: Is it safe?**  
+A: Electrically identical to pressing the case power button, if wired correctly.
 
->[!NOTE]
->- Replace placeholders with your own Sheet ID / Web App URL
->- Do NOT commit secrets (keep config.h private)
+---
 
-License
+> [!NOTE]
+> - Replace placeholders with your own Sheet ID / Web App URL
+> - Do NOT commit secrets (keep `config.h` private)
+> - This project was originally built nearly three years ago. The original 3D model files for the enclosure have been lost. The structure is very simple — if there is real demand, feel free to contact me and I can recreate it. Contributions to restore or redesign the 3D files are also highly appreciated.
+
+---
+
+## License
+
 Apache License 2.0
