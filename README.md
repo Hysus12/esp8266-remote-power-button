@@ -41,12 +41,24 @@ Works behind NAT / CGNAT.
 
 ### Hardware
 
-ESP8266 (NodeMCU / Wemos D1 mini)
+- ESP8266 (NodeMCU / Wemos D1 mini)
+<p align="center">
+  <img src="docs/images/esp.jpg" width="400">
+</p>
 
+- 1-channel relay module (prefer opto-isolated if possible)
+<p align="center">
+  <img src="docs/images/relay.jpg" width="400">
+</p>
 
-1-channel relay module (prefer opto-isolated if possible)
-
-2 wires to the motherboard Power SW header (in parallel with your case power button)
+- 2 wires to the motherboard Power SW header (in parallel with your case power button)
+ <p align="center">
+  <img src="docs/images/sw.jpg" width="400">
+</p>
+put together be like:
+<p align="center">
+  <img src="docs/images/inside.jpg" width="400">
+</p>
 
 The Power SW header is a low-voltage momentary switch input on the motherboard.
 Do NOT connect mains voltage. Do NOT modify the PSU wiring.
